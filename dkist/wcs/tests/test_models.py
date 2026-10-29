@@ -448,6 +448,23 @@ def test_vct_inverse_outside_the_table():
     assert np.isnan([x[1], y[1]]).all()
 
 
+def test_vct_non_finite_lookup_index_is_outside_the_table():
+    """
+    A NaN or infinite lookup index is outside the table, so it gives NaN
+    both ways rather than the values of a row.
+    """
+    vct = VaryingCelestialTransform(crpix_table=(0, 0), cdelt=(1, 1), crval_table=((10, 0), (20, 0)), pc_table=np.identity(2))
+    lookups = np.array([np.nan, np.inf, 1])
+
+    assert np.array_equal(vct.sanitize_index(lookups), [-1, -1, 1])
+    lon, lat = vct(np.zeros(3), np.zeros(3), lookups)
+    assert np.isnan([lon[:2], lat[:2]]).all()
+    assert np.allclose([lon[2], lat[2]], [20, 0])
+    x, y = vct.inverse(lon[2] * np.ones(3), lat[2] * np.ones(3), lookups)
+    assert np.isnan([x[:2], y[:2]]).all()
+    assert np.allclose([x[2], y[2]], [0, 0])
+
+
 @pytest.mark.parametrize("num_varying_axes", [pytest.param(1, id="1D"), pytest.param(2, id="2D"), pytest.param(3, id="3D")])
 @pytest.mark.parametrize("slit", [pytest.param(1, id="spectrograph"), pytest.param(None, id="imager")])
 @pytest.mark.parametrize("has_units", [pytest.param(True, id="With Units"), pytest.param(False, id="Without Units")])

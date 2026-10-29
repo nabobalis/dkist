@@ -204,6 +204,8 @@ class BaseVaryingCelestialTransform(Model, ABC):
     def sanitize_index(ind):
         if isinstance(ind, u.Quantity):
             ind = ind.value
+        # A NaN or infinite index is outside the table.
+        ind = np.where(np.isfinite(ind), ind, -1)
         # A lookup halfway between two rows uses the later row.
         return np.array(_round_half_up(ind), dtype=int)
 
