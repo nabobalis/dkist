@@ -715,6 +715,36 @@ def test_ravel_half_pixels_take_the_later_pixel(order, has_units):
     assert np.allclose(result, np.array([4, 8, 12]) * unit)
 
 
+@pytest.mark.parametrize("order", ["C", "F"])
+def test_unravel_nd_input(order):
+    """
+    Unravel takes input of any shape.
+    """
+    unravel = Unravel((3, 4), order=order)
+    values = np.array([[0.5, 1.2], [5.0, 11.7]])
+
+    result = unravel(values)
+
+    for item, expected in zip(result, unravel(values.ravel()), strict=True):
+        assert np.allclose(item, expected.reshape(values.shape))
+
+
+@pytest.mark.parametrize("has_units", [True, False])
+def test_unravel_nan_and_outside_the_array(has_units):
+    """
+    Unravel returns NaN for a NaN index or one outside the array,
+    as the inverse of a raveled Tabular1D gives outside its table.
+    """
+    unravel = Unravel((3, 3))
+    unit = u.pix if has_units else 1
+
+    rows, columns = unravel(np.array([np.nan, -1.5, 9.2, 4.5]) * unit)
+
+    assert np.isnan(rows[:3]).all()
+    assert np.isnan(columns[:3]).all()
+    assert np.allclose([rows[3], columns[3]], [1, 1.5] * unit)
+
+
 @pytest.mark.parametrize("ndim", [pytest.param(2, id="2D"), pytest.param(3, id="3D")])
 @pytest.mark.parametrize("order", ["C", "F"])
 def test_ravel_repr(ndim, order):

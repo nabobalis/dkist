@@ -824,17 +824,13 @@ class Unravel(Model):
 
     def evaluate(self, input_):
         """Evaluate the reverse ravel (unravel) for a given pixel value."""
-        if hasattr(input_, "unit"):
-            has_units = True
-            input_value = [item.to_value(u.pix) for item in input_]
-            input_value_int = [int(item) for item in input_value]
-        else:
-            has_units = False
-            input_value = input_
-            input_value_int = [int(item) for item in input_]
-
-        result = list(np.unravel_index(input_value_int, self.array_shape, order=self.order))
-        result = [item.astype(float) for item in result]
+        has_units = hasattr(input_, "unit")
+        input_value = input_.to_value(u.pix) if has_units else np.asarray(input_, dtype=float)
+        # Truncate as int() would. A NaN index, or one outside the array, gives NaN.
+        input_value_int = np.trunc(input_value)
+        inside = (input_value_int >= 0) & (input_value_int < np.prod(self.array_shape))
+        result = np.unravel_index(np.where(inside, input_value_int, 0).astype(int), self.array_shape, order=self.order)
+        result = [np.where(inside, item, np.nan) for item in result]
         # Adjust the result to allow a fractional part for interpolation in Tabular1D
         index = 0 if self.order == "F" else -1
         fraction = np.remainder(input_value, 1)
